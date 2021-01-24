@@ -3,11 +3,8 @@ function main()
   var stats = initStats();          // To show FPS information
   var scene = new THREE.Scene();    // Create main scene
   var renderer = initRenderer();    // View function in util/utils
-  var camera = initCamera(new THREE.Vector3(0, -30, 15)); // Init camera in this position
-  camera.position.set(3.6,323,95);
-  camera.rotation.set(-1.4973600200379098, 0.1593964870567982, -3.1052736671946093)
-  console.log(camera.position);
-  console.log(camera.rotation);
+  var camera = initCamera(new THREE.Vector3(0, -100, -50)); // Init camera in this position
+  camera.up.set(0,0,1);
   var light = initDefaultLighting(scene, new THREE.Vector3(0, 0, 30)); // Use default light
   var speed = 0;
   var maxspeed = 10;
@@ -23,7 +20,7 @@ function main()
   scene.add( axesHelper );
 
   // create the ground plane with wireframe
-  var planeGeometry = new THREE.PlaneGeometry(700, 700, 40, 40);
+  var planeGeometry = new THREE.PlaneGeometry(1000, 1000, 40, 40);
   planeGeometry.translate(0.0, 0.0, -0.02); // To avoid conflict with the axeshelper
   var planeMaterial = new THREE.MeshBasicMaterial({
       color: "rgba(20, 30, 110)",
@@ -141,6 +138,7 @@ function main()
   //Criando o aerofolio
   var aerofolio = createAerofolio();
   scene.add(aerofolio);
+  aerofolio.add(camera);
 
   //Conectando o aerofolio as bases e posicionando o aerofolio
   aerofolio.position.set(10.0, 0.0, -6.0);
@@ -179,7 +177,6 @@ function main()
   painel.add(volante);
   volante.position.set(0.0, -1.0, -1.0);
   volante.rotateX(Math.PI/2);
-
   // Use this to show information onscreen
   controls = new InfoBox();
     controls.add("Basic Scene");
@@ -211,7 +208,7 @@ function main()
       projectionMessage.changeMessage("Perspective");
     }
     camera.position.copy(pos);
-    camera.lookAt(scene.position);
+    camera.lookAt(aerfolio.position);
     trackballControls = initTrackballControls(camera, renderer);
     lightFollowingCamera(light, camera) // Makes light follow the camera
   }
@@ -394,7 +391,7 @@ function main()
     {  
       if(speed != maxspeed)
       {
-        speed=speed+0.1;
+        speed=speed+0.05;
       }
     }
     if ( keyboard.pressed("down") )
@@ -415,15 +412,19 @@ function main()
       retanguloFrontal.translateZ(speed);
     }
   }
+  function cameraUpdatePosition()
+  {
+    camera.lookAt(retanguloFrontal.position);
+  }
 
   function render()
   {
     stats.update(); // Update FPS
     trackballControls.update(); // Enable mouse movements
     lightFollowingCamera(light, camera)
-    
     requestAnimationFrame(render);
     keyboardUpdate();
+    cameraUpdatePosition();
     renderer.render(scene, camera) // Render scene
   }
 }
