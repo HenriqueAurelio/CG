@@ -183,10 +183,9 @@ function main()
   controls = new InfoBox();
     controls.add("Basic Scene");
     controls.addParagraph();
-    controls.add("Use mouse to interact:");
-    controls.add("* Left button to rotate");
-    controls.add("* Right button to translate (pan)");
-    controls.add("* Scroll to zoom in/out.");
+    controls.add("* Use a seta para cima para acelerar e a seta para baixo para desacelerar");
+    controls.add("* Use as setas laterais para mudar a direção");
+    controls.add("* Aperte espaço para o modo inspeção");
     controls.show();
     
  
@@ -195,7 +194,6 @@ function main()
 
   var projectionMessage = new SecondaryBox("Modo de Jogo");
 
-  buildInterface();
   render();
   function changeProjection()
   {
@@ -214,24 +212,6 @@ function main()
     camera.lookAt(scene.position);
     trackballControls = initTrackballControls(camera, renderer);
     lightFollowingCamera(light, camera) // Makes light follow the camera
-  }
-
-  function buildInterface()
-  {
-    var controls = new function ()
-    {
-      this.onChangeProjection = function(){
-        changeProjection();
-      };
-      this.onRestartCamera = function(){
-        restartCamera();
-      };
-    };
-
-    // GUI interface
-    var gui = new dat.GUI();
-    gui.add(controls, 'onChangeProjection').name("Change Projection");
-    gui.add(controls, 'onRestartCamera').name("Restart Camera");
   }
 
   function createPneu()
