@@ -5,7 +5,8 @@ function main()
   var renderer = initRenderer();    // View function in util/utils
   var camera = initCamera(new THREE.Vector3(0, -100, -50)); // Init camera in this position
   camera.up.set(0,0,1);
-  var light = initDefaultLighting(scene, new THREE.Vector3(0, 0, 30)); // Use default light
+  var light = initDefaultLighting(scene, new THREE.Vector3(0, -100, -50)); // Use default light
+  light.up.set(0,0,1);
   var speed = 0;
   var maxspeed = 10;
   var virado = 0;
@@ -139,6 +140,7 @@ function main()
   var aerofolio = createAerofolio();
   scene.add(aerofolio);
   aerofolio.add(camera);
+  aerofolio.add(light);
 
   //Conectando o aerofolio as bases e posicionando o aerofolio
   aerofolio.position.set(10.0, 0.0, -6.0);
@@ -186,11 +188,12 @@ function main()
     controls.add("* Right button to translate (pan)");
     controls.add("* Scroll to zoom in/out.");
     controls.show();
-
+    
+ 
   // Listen window size changes
   window.addEventListener( 'resize', function(){onWindowResize(camera, renderer)}, false );
 
-  var projectionMessage = new SecondaryBox("Perspective Projection");
+  var projectionMessage = new SecondaryBox("Modo de Jogo");
 
   buildInterface();
   render();
@@ -202,13 +205,13 @@ function main()
     if (camera instanceof THREE.PerspectiveCamera)
     {
       camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
-      projectionMessage.changeMessage("Modo Jogo");
+      projectionMessage.changeMessage("Modo Perspectivo");
     } else {
       camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
-      projectionMessage.changeMessage("Perspective");
+      projectionMessage.changeMessage("Modo Jogo");
     }
     camera.position.copy(pos);
-    camera.lookAt(aerfolio.position);
+    camera.lookAt(scene.position);
     trackballControls = initTrackballControls(camera, renderer);
     lightFollowingCamera(light, camera) // Makes light follow the camera
   }
@@ -346,6 +349,11 @@ function main()
     return volante;
   }
 
+  function changeCamera(position,look,upp) {
+    camera.position.copy(position);
+    camera.lookAt(look); 
+    camera.up.set(upp.x,upp.y,upp.z);
+}
   function keyboardUpdate() {
 
     keyboard.update();
@@ -403,18 +411,25 @@ function main()
     }
     if(speed> 0)
     {
-      pneu1.rotation.z +=0.1;
-      pneu2.rotation.z +=0.1;
       pneu3.rotation.z +=0.1;
       pneu4.rotation.z +=0.1;
       direcao = pneu1.rotation.x;
       retanguloFrontal.rotation.y=Math.cos(direcao) * speed;
       retanguloFrontal.translateZ(speed);
     }
+    if( keyboard.pressed("space"))
+    {
+      changeProjection();
+      camera.position.set(0,100,50);
+      camera.up.set(0,0,1);
+      scene.remove(plane);
+    }
   }
-  function cameraUpdatePosition()
+
+  function cameraUpdateLookAt()
   {
     camera.lookAt(retanguloFrontal.position);
+    light.lookAt(camera.position);
   }
 
   function render()
@@ -424,7 +439,7 @@ function main()
     lightFollowingCamera(light, camera)
     requestAnimationFrame(render);
     keyboardUpdate();
-    cameraUpdatePosition();
+    cameraUpdateLookAt();
     renderer.render(scene, camera) // Render scene
   }
 }
