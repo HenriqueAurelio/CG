@@ -12,6 +12,7 @@ function main()
   var virado = 0;
   var virEsq = 0;
   var virDir = 0;
+  var mode = 0;
   var direcao;
   // Enable mouse rotation, pan, zoom etc.
   var trackballControls = new THREE.TrackballControls( camera, renderer.domElement );
@@ -185,7 +186,9 @@ function main()
     controls.addParagraph();
     controls.add("* Use a seta para cima para acelerar e a seta para baixo para desacelerar");
     controls.add("* Use as setas laterais para mudar a direção");
+    controls.addParagraph();
     controls.add("* Aperte espaço para o modo inspeção");
+    controls.add("* No modo de inspeção deve-se usar W A S D para o controle de zoom")
     controls.show();
     
  
@@ -193,6 +196,7 @@ function main()
   window.addEventListener( 'resize', function(){onWindowResize(camera, renderer)}, false );
 
   var projectionMessage = new SecondaryBox("Modo de Jogo");
+
 
   render();
   function changeProjection()
@@ -203,7 +207,7 @@ function main()
     if (camera instanceof THREE.PerspectiveCamera)
     {
       camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
-      projectionMessage.changeMessage("Modo Perspectivo");
+      projectionMessage.changeMessage("Modo de Inspeção");
     } else {
       camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
       projectionMessage.changeMessage("Modo Jogo");
@@ -329,15 +333,9 @@ function main()
     return volante;
   }
 
-  function changeCamera(position,look,upp) {
-    camera.position.copy(position);
-    camera.lookAt(look); 
-    camera.up.set(upp.x,upp.y,upp.z);
-}
   function keyboardUpdate() {
 
     keyboard.update();
-
     if ( keyboard.down("left") )   
     {
       if(virado == 0)
@@ -377,7 +375,7 @@ function main()
     }
     if ( keyboard.pressed("up") )  
     {  
-      if(speed != maxspeed)
+      if(speed != maxspeed && mode == 0)
       {
         speed=speed+0.05;
       }
@@ -396,13 +394,36 @@ function main()
       direcao = pneu1.rotation.x;
       retanguloFrontal.rotation.y=Math.cos(direcao) * speed;
       retanguloFrontal.translateZ(speed);
+      light.translateX(speed);
     }
-    if( keyboard.pressed("space"))
+    if( keyboard.down("space"))
     {
+      mode = 1;
       changeProjection();
       camera.position.set(0,100,50);
       camera.up.set(0,0,1);
-      scene.remove(plane);
+      plane.visible = false;
+      line.visible = false;
+    }
+
+    if(mode == 1 )
+    {
+      if(keyboard.pressed("A"))
+      {
+        camera.translateX(1);
+      }
+      if(keyboard.pressed("D"))
+      {
+        camera.translateX(-1);
+      }
+      if(keyboard.pressed("W"))
+      {
+        camera.translateZ(-1);
+      }
+      if(keyboard.pressed("S"))
+      {
+        camera.translateZ(1);
+      }
     }
   }
 
@@ -412,11 +433,11 @@ function main()
     light.lookAt(camera.position);
   }
 
+
   function render()
   {
     stats.update(); // Update FPS
     trackballControls.update(); // Enable mouse movements
-    lightFollowingCamera(light, camera)
     requestAnimationFrame(render);
     keyboardUpdate();
     cameraUpdateLookAt();
