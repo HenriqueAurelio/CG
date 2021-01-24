@@ -199,6 +199,7 @@ function main()
 
 
   render();
+  //Alterar modo da camera
   function changeProjection()
   {
     // Store the previous position of the camera
@@ -215,7 +216,6 @@ function main()
     camera.position.copy(pos);
     camera.lookAt(scene.position);
     trackballControls = initTrackballControls(camera, renderer);
-    lightFollowingCamera(light, camera) // Makes light follow the camera
   }
 
   function createPneu()
@@ -427,6 +427,7 @@ function main()
     }
   }
 
+  //Atualizar para onde a camera e luz alveja
   function cameraUpdateLookAt()
   {
     camera.lookAt(retanguloFrontal.position);
