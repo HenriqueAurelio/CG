@@ -3,12 +3,16 @@ function main()
   var stats = initStats();          // To show FPS information
   var scene = new THREE.Scene();    // Create main scene
   var renderer = initRenderer();    // View function in util/utils
-  var camera = initCamera(new THREE.Vector3(0, -30, 15)); // Init camera in this position
+  var camera = initCamera(new THREE.Vector3(0, -100, -50)); // Init camera in this position
+  camera.up.set(0,0,1);
+  var light = initDefaultLighting(scene, new THREE.Vector3(0, -100, -50)); // Use default light
+  light.up.set(0,0,1);
   var speed = 0;
   var maxspeed = 10;
   var virado = 0;
   var virEsq = 0;
   var virDir = 0;
+  var mode = 0;
   var direcao;
   // Enable mouse rotation, pan, zoom etc.
   var trackballControls = new THREE.TrackballControls( camera, renderer.domElement );
@@ -17,16 +21,23 @@ function main()
   var axesHelper = new THREE.AxesHelper( 12 );
   scene.add( axesHelper );
 
-  // create the ground plane
-  var planeGeometry = new THREE.PlaneGeometry(200, 200);
+  // create the ground plane with wireframe
+  var planeGeometry = new THREE.PlaneGeometry(1000, 1000, 40, 40);
   planeGeometry.translate(0.0, 0.0, -0.02); // To avoid conflict with the axeshelper
   var planeMaterial = new THREE.MeshBasicMaterial({
-      color: "rgba(150, 150, 150)",
+      color: "rgba(20, 30, 110)",
       side: THREE.DoubleSide,
+      polygonOffset: true,
+      polygonOffsetFactor: 1, // positive value pushes polygon further away
+      polygonOffsetUnits: 1
   });
   var plane = new THREE.Mesh(planeGeometry, planeMaterial);
-  // add the plane to the scene
   scene.add(plane);
+
+  var wireframe = new THREE.WireframeGeometry( planeGeometry );
+  var line = new THREE.LineSegments( wireframe );
+  line.material.color.setStyle( "rgb(180, 180, 180)" );  
+  scene.add(line);
 
    // To use the keyboard
    var keyboard = new KeyboardState();
@@ -60,7 +71,7 @@ function main()
   eixo2.add(pneu4);
   pneu4.position.set(0.0,-20.0,0.0);
   pneu4.rotateX(Math.PI/2);
-  var rotacaoInicial = pneu1.rotation.x; 
+  var rotacaoInicial = pneu4.rotation.x; 
 
   //criando o retângulo que conecta o eixo frontal ao bico
   var retanguloFrontal = createRetanguloFrontal();
@@ -99,7 +110,7 @@ function main()
 
   //Posicionando o retângulo traseiro e conectando o eixo ao retângulo traseiro,conectando a base ao retangulo traseiro
   base.add(retanguloTraseiro);
-  retanguloTraseiro.position.set(0.0, -20.0, -1.0);
+  retanguloTraseiro.position.set(0.0, -20.0, 0.0);
   retanguloTraseiro.rotateX(-Math.PI/2);
   retanguloTraseiro.add(eixo2);
   eixo2.position.set(0.0, 0.0, 0.0);
@@ -129,6 +140,8 @@ function main()
   //Criando o aerofolio
   var aerofolio = createAerofolio();
   scene.add(aerofolio);
+  aerofolio.add(camera);
+  aerofolio.add(light);
 
   //Conectando o aerofolio as bases e posicionando o aerofolio
   aerofolio.position.set(10.0, 0.0, -6.0);
@@ -167,28 +180,48 @@ function main()
   painel.add(volante);
   volante.position.set(0.0, -1.0, -1.0);
   volante.rotateX(Math.PI/2);
-
-
-
   // Use this to show information onscreen
   controls = new InfoBox();
     controls.add("Basic Scene");
     controls.addParagraph();
-    controls.add("Use mouse to interact:");
-    controls.add("* Left button to rotate");
-    controls.add("* Right button to translate (pan)");
-    controls.add("* Scroll to zoom in/out.");
+    controls.add("* Use a seta para cima para acelerar e a seta para baixo para desacelerar");
+    controls.add("* Use as setas laterais para mudar a direção");
+    controls.addParagraph();
+    controls.add("* Aperte espaço para o modo inspeção");
+    controls.add("* No modo de inspeção deve-se usar W A S D para o controle de zoom")
     controls.show();
-
+    
+ 
   // Listen window size changes
   window.addEventListener( 'resize', function(){onWindowResize(camera, renderer)}, false );
 
+  var projectionMessage = new SecondaryBox("Modo de Jogo");
+
+
   render();
+  //Alterar modo da camera
+  function changeProjection()
+  {
+    // Store the previous position of the camera
+    var pos = new THREE.Vector3().copy(camera.position);
+
+    if (camera instanceof THREE.PerspectiveCamera)
+    {
+      camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
+      projectionMessage.changeMessage("Modo de Inspeção");
+    } else {
+      camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
+      projectionMessage.changeMessage("Modo Jogo");
+    }
+    camera.position.copy(pos);
+    camera.lookAt(scene.position);
+    trackballControls = initTrackballControls(camera, renderer);
+  }
 
   function createPneu()
   {
     const pneuGeometry = new THREE.TorusGeometry(2.5,2.5, 10, 100 );
-    const pneuMaterial = new THREE.MeshNormalMaterial( { color: 000000 } );
+    const pneuMaterial = new THREE.MeshPhongMaterial( { color: 000000 } );
     const pneu = new THREE.Mesh( pneuGeometry, pneuMaterial );
     return pneu;
   }
@@ -197,97 +230,97 @@ function main()
   {
     const eixoColor = new THREE.Color("rgb(128, 128, 128)");
     const eixoGeometry = new THREE.CylinderGeometry(1, 1, 40);
-    const eixoMaterial = new THREE.MeshNormalMaterial({color:'rgb(180,180,255)'});
+    const eixoMaterial = new THREE.MeshPhongMaterial({color: eixoColor});
     const eixo = new THREE.Mesh(eixoGeometry, eixoMaterial);
     return eixo;
   }
 
   function createRetanguloFrontal()
   {
-    const retanguloFrontalColor = new THREE.Color("rgb(65,105,225)");
-    const retanguloFrontalGeometry = new THREE.BoxGeometry(15, 4, 20);
-    const retanguloFrontalMaterial = new THREE.MeshNormalMaterial({color:'rgb(180,180,255)'});
+    const retanguloFrontalColor = new THREE.Color("#D72638");
+    const retanguloFrontalGeometry = new THREE.BoxGeometry(15, 3, 20);
+    const retanguloFrontalMaterial = new THREE.MeshPhongMaterial({color:retanguloFrontalColor});
     const retanguloFrontal = new THREE.Mesh(retanguloFrontalGeometry, retanguloFrontalMaterial);
     return retanguloFrontal;
   }
 
   function createBico()
   {
-    const bicoColor = new THREE.Color("rgb(65,187,20)");
+    const bicoColor = new THREE.Color("#3F88C5");
     const bicoGeometry = new THREE.BoxGeometry(30, 12, 4);
-    const bicoMaterial = new THREE.MeshNormalMaterial({color:'rgb(180,180,255)'});
+    const bicoMaterial = new THREE.MeshPhongMaterial({color: bicoColor});
     const bico = new THREE.Mesh(bicoGeometry, bicoMaterial);
     return bico;
   }
 
   function createBase()
   {
-    const baseColor = new THREE.Color("rgb(6,87,20)");
+    const baseColor = new THREE.Color("#3F88C5");
     const baseGeometry = new THREE.BoxGeometry(30, 30, 4);
-    const baseMaterial = new THREE.MeshNormalMaterial({color:'rgb(180,180,255)'});
+    const baseMaterial = new THREE.MeshPhongMaterial({color:baseColor});
     const base = new THREE.Mesh(baseGeometry, baseMaterial);
     return base;
   }
 
   function createRetanguloTraseiro()
   {
-    const retanguloTraseiroColor = new THREE.Color("rgb(6,105,225)");
+    const retanguloTraseiroColor = new THREE.Color("#D72638");
     const retanguloTraseiroGeometry = new THREE.BoxGeometry(15, 4, 10);
-    const retanguloTraseiroMaterial = new THREE.MeshNormalMaterial({color:'rgb(180,180,255)'});
+    const retanguloTraseiroMaterial = new THREE.MeshPhongMaterial({color:retanguloTraseiroColor});
     const retanguloTraseiro = new THREE.Mesh(retanguloTraseiroGeometry, retanguloTraseiroMaterial);
     return retanguloTraseiro;
   }
 
   function createTraseira()
   {
-    const traseiraColor = new THREE.Color("rgb(65,187,20)");
+    const traseiraColor = new THREE.Color("#3F88C5");
     const traseiraGeometry = new THREE.BoxGeometry(30, 5, 4);
-    const traseiraMaterial = new THREE.MeshNormalMaterial({color:'rgb(180,180,255)'});
+    const traseiraMaterial = new THREE.MeshPhongMaterial({color:traseiraColor});
     const traseira = new THREE.Mesh(traseiraGeometry, traseiraMaterial);
     return traseira;
   }
 
   function createBaseAerofolio()
   {
-    const baseAerofolioColor = new THREE.Color("rgb(65,187,20)");
+    const baseAerofolioColor = new THREE.Color("#3F88C5");
     const baseAerofolioGeometry = new THREE.BoxGeometry(1, 4, 12);
-    const baseAerofolioMaterial = new THREE.MeshNormalMaterial({color:'rgb(180,180,255)'});
+    const baseAerofolioMaterial = new THREE.MeshPhongMaterial({color:baseAerofolioColor});
     const baseAerofolio = new THREE.Mesh(baseAerofolioGeometry, baseAerofolioMaterial);
     return baseAerofolio;
   }
 
   function createAerofolio()
   {
-    const aerofolioColor = new THREE.Color("rgb(58,32,20)");
+    const aerofolioColor = new THREE.Color("#D72638");
     const aerofolioGeometry = new THREE.BoxGeometry(30, 5, 1);
-    const aerofolioMaterial = new THREE.MeshNormalMaterial({color:'rgb(180,180,255)'});
+    const aerofolioMaterial = new THREE.MeshPhongMaterial({color:aerofolioColor});
     const aerofolio = new THREE.Mesh(aerofolioGeometry, aerofolioMaterial);
     return aerofolio;
   }
 
   function createAssento()
   {
-    const assentoColor = new THREE.Color("rgb(58,32,20)");
+    const assentoColor = new THREE.Color("#4169E1");
     const assentoGeometry = new THREE.BoxGeometry(12, 12, 2);
-    const assentoMaterial = new THREE.MeshNormalMaterial({color:'rgb(180,180,255)'});
+    const assentoMaterial = new THREE.MeshPhongMaterial({color:assentoColor});
     const assento = new THREE.Mesh(assentoGeometry, assentoMaterial);
     return assento;
   }
 
   function createEncosto()
   {
-    const encostoColor = new THREE.Color("rgb(58,32,20)");
+    const encostoColor = new THREE.Color("#4169E1");
     const encostoGeometry = new THREE.BoxGeometry(12, 1, 12);
-    const encostoMaterial = new THREE.MeshNormalMaterial({color:'rgb(180,180,255)'});
+    const encostoMaterial = new THREE.MeshPhongMaterial({color:encostoColor});
     const encosto = new THREE.Mesh(encostoGeometry, encostoMaterial);
     return encosto;
   }
 
   function createPainel()
   {
-    const painelColor = new THREE.Color("rgb(58,32,20)");
+    const painelColor = new THREE.Color("#4169E1");
     const painelGeometry = new THREE.BoxGeometry(12, 2, 8);
-    const painelMaterial = new THREE.MeshNormalMaterial({color:'rgb(180,180,255)'});
+    const painelMaterial = new THREE.MeshPhongMaterial({color:painelColor});
     const painel = new THREE.Mesh(painelGeometry, painelMaterial);
     return painel;
   }
@@ -295,7 +328,7 @@ function main()
   function createVolante()
   {
     const volanteGeometry = new THREE.TorusGeometry(2, 0.3, 8, 100 );
-    const volanteMaterial = new THREE.MeshNormalMaterial( { color: 000000 } );
+    const volanteMaterial = new THREE.MeshPhongMaterial( { color: 000000 } );
     const volante = new THREE.Mesh( volanteGeometry, volanteMaterial );
     return volante;
   }
@@ -303,7 +336,6 @@ function main()
   function keyboardUpdate() {
 
     keyboard.update();
-
     if ( keyboard.down("left") )   
     {
       if(virado == 0)
@@ -343,9 +375,9 @@ function main()
     }
     if ( keyboard.pressed("up") )  
     {  
-      if(speed != maxspeed)
+      if(speed != maxspeed && mode == 0)
       {
-        speed=speed+0.1;
+        speed=speed+0.05;
       }
     }
     if ( keyboard.pressed("down") )
@@ -357,21 +389,59 @@ function main()
     }
     if(speed> 0)
     {
-      pneu1.rotation.z +=0.1;
-      pneu2.rotation.z +=0.1;
       pneu3.rotation.z +=0.1;
       pneu4.rotation.z +=0.1;
       direcao = pneu1.rotation.x;
       retanguloFrontal.rotation.y=Math.cos(direcao) * speed;
       retanguloFrontal.translateZ(speed);
+      light.translateX(speed);
+    }
+    if( keyboard.down("space"))
+    {
+      mode = 1;
+      changeProjection();
+      camera.position.set(0,100,50);
+      camera.up.set(0,0,1);
+      plane.visible = false;
+      line.visible = false;
+    }
+
+    if(mode == 1 )
+    {
+      if(keyboard.pressed("A"))
+      {
+        camera.translateX(1);
+      }
+      if(keyboard.pressed("D"))
+      {
+        camera.translateX(-1);
+      }
+      if(keyboard.pressed("W"))
+      {
+        camera.translateZ(-1);
+      }
+      if(keyboard.pressed("S"))
+      {
+        camera.translateZ(1);
+      }
     }
   }
+
+  //Atualizar para onde a camera e luz alveja
+  function cameraUpdateLookAt()
+  {
+    camera.lookAt(retanguloFrontal.position);
+    light.lookAt(camera.position);
+  }
+
+
   function render()
   {
     stats.update(); // Update FPS
     trackballControls.update(); // Enable mouse movements
     requestAnimationFrame(render);
     keyboardUpdate();
+    cameraUpdateLookAt();
     renderer.render(scene, camera) // Render scene
   }
 }
